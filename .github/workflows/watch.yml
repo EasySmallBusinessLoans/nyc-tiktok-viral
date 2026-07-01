@@ -1,0 +1,43 @@
+name: TikTok Viral Watch
+
+on:
+  schedule:
+    # GitHub's minimum interval is 5 minutes; actual cadence can slip
+    # to 10-20 min during periods of high platform load.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tiktok-viral-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check for viral videos
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          APIFY_ACTOR_ID: clockworks~tiktok-scraper
+          VIEW_THRESHOLD: "500000"
+          LIKE_THRESHOLD: "100000"
+          RESULTS_PER_HASHTAG: "25"
+        run: node scripts/check-viral.js
+
+      - name: Persist seen-video state
+        run: |
+          git config user.name "tiktok-viral-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/seen.json
+          git diff --cached --quiet || git commit -m "chore: update seen video state [skip ci]"
+          git push

@@ -1,0 +1,13 @@
+{
+  "name": "tiktok-viral-watch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Polls TikTok hashtags via Apify and alerts Slack when a video crosses a view/like threshold.",
+  "scripts": {
+    "check": "node scripts/check-viral.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
