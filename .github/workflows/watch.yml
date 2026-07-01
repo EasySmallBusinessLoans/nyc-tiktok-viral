@@ -1,10 +1,13 @@
 name: TikTok Viral Watch
 
 on:
-  schedule:
-    # GitHub's minimum interval is 5 minutes; actual cadence can slip
-    # to 10-20 min during periods of high platform load.
-    - cron: "*/10 * * * *"
+  # Cron schedule intentionally disabled - re-enable only after re-costing
+  # the Apify actor's per-result pricing against RESULTS_PER_HASHTAG and
+  # hashtag count. See conversation history: at 131 hashtags x 25 results
+  # every 10 minutes this actor's ~$3.70/1,000-result pricing works out to
+  # roughly $1,700+/day. Manual runs only until the numbers are fixed.
+  # schedule:
+  #   - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 permissions:
