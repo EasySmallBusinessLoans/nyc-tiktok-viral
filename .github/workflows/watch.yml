@@ -1,13 +1,13 @@
 name: TikTok Viral Watch
 
 on:
-  # Cron schedule intentionally disabled - re-enable only after re-costing
-  # the Apify actor's per-result pricing against RESULTS_PER_HASHTAG and
-  # hashtag count. See conversation history: at 131 hashtags x 25 results
-  # every 10 minutes this actor's ~$3.70/1,000-result pricing works out to
-  # roughly $1,700+/day. Manual runs only until the numbers are fixed.
-  # schedule:
-  #   - cron: "*/10 * * * *"
+  schedule:
+    # Fires twice daily in UTC to cover both Mountain Time offsets across
+    # daylight saving (MDT UTC-6 / MST UTC-7). check-viral.js checks the
+    # actual current Mountain time and only proceeds on the one that's
+    # really 7am there - the other is a near-free no-op (no Apify calls).
+    - cron: "0 13 * * *" # 7:00 AM MDT
+    - cron: "0 14 * * *" # 7:00 AM MST
   workflow_dispatch: {}
 
 permissions:
@@ -36,7 +36,8 @@ jobs:
           APIFY_ACTOR_ID: apidojo~tiktok-scraper
           VIEW_THRESHOLD: "500000"
           LIKE_THRESHOLD: "100000"
-          RESULTS_PER_HASHTAG: "3"
+          RESULTS_PER_HASHTAG: "10"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: node scripts/check-viral.js
 
       - name: Persist seen-video state

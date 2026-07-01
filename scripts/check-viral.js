@@ -15,8 +15,26 @@ const ACTOR_ID = process.env.APIFY_ACTOR_ID || "apidojo~tiktok-scraper";
 
 const VIEW_THRESHOLD = Number(process.env.VIEW_THRESHOLD || 500000);
 const LIKE_THRESHOLD = Number(process.env.LIKE_THRESHOLD || 100000);
-const RESULTS_PER_HASHTAG = Number(process.env.RESULTS_PER_HASHTAG || 3);
+const RESULTS_PER_HASHTAG = Number(process.env.RESULTS_PER_HASHTAG || 10);
 const SEEN_TTL_DAYS = 30;
+const GITHUB_EVENT_NAME = process.env.GITHUB_EVENT_NAME || "";
+
+// GitHub Actions cron runs in UTC, and Mountain Time shifts between MST
+// (UTC-7) and MDT (UTC-6) with daylight saving, so the workflow fires two
+// cron triggers a day (one per possible offset) and this checks which one,
+// if any, is actually 7am in Mountain Time right now. Manual dispatches
+// always run regardless of time, so testing isn't gated by the clock.
+function isScheduledRunTime() {
+  if (GITHUB_EVENT_NAME && GITHUB_EVENT_NAME !== "schedule") return true;
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Denver",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date())
+  );
+  return hour === 7;
+}
 
 if (!APIFY_TOKENS.length) {
   throw new Error("Missing APIFY_TOKENS env var (comma-separated list of one or more Apify tokens)");
@@ -101,6 +119,11 @@ async function notifySlack(video, hashtag, reason) {
 }
 
 async function main() {
+  if (!isScheduledRunTime()) {
+    console.log("Not 7am Mountain Time yet at this cron trigger - skipping (no Apify calls made).");
+    return;
+  }
+
   pruneSeen();
 
   let fetched = 0;
