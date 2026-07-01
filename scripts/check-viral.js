@@ -130,15 +130,23 @@ async function main() {
   pruneSeen();
 
   let fetched = 0;
-  const candidates = [];
+  const candidatesById = new Map();
 
   for (const hashtag of hashtags) {
-    const items = await fetchHashtagVideos(hashtag);
+    let items;
+    try {
+      items = await fetchHashtagVideos(hashtag);
+    } catch (err) {
+      // One hashtag failing shouldn't blank out the whole day's alerts -
+      // skip it and keep going with the rest.
+      console.warn(`Skipping #${hashtag} this run - all tokens failed: ${err.message}`);
+      continue;
+    }
     fetched += items.length;
 
     for (const video of items) {
       const id = video.id ?? video.webVideoUrl ?? video.url;
-      if (!id || seen[id]) continue;
+      if (!id || seen[id] || candidatesById.has(id)) continue;
 
       const views = video.views ?? video.playCount ?? 0;
       const likes = video.likes ?? video.diggCount ?? 0;
@@ -153,26 +161,35 @@ async function main() {
           ? "500k+ views"
           : "100k+ likes";
 
-        candidates.push({ video, hashtag, reason, views, id });
+        candidatesById.set(id, { video, hashtag, reason, views, id });
       }
     }
   }
 
-  // Rank by views descending and only alert on the top N, so a busy day
-  // doesn't flood Slack - videos that qualify but don't make the cut are
-  // NOT marked as seen, so they can still surface on a future run if
-  // they're still trending relative to that run's candidates.
+  // Rank by views descending and only alert on the top N (uncapped by
+  // default - see MAX_ALERTS_PER_RUN above). Videos that qualify but don't
+  // make the cut are NOT marked as seen, so they can still surface on a
+  // future run if they're still trending relative to that run's candidates.
+  const candidates = [...candidatesById.values()];
   candidates.sort((a, b) => b.views - a.views);
   const toAlert = candidates.slice(0, MAX_ALERTS_PER_RUN);
 
+  let alerted = 0;
   for (const { video, hashtag, reason, id } of toAlert) {
-    await notifySlack(video, hashtag, reason);
-    seen[id] = Date.now();
+    try {
+      await notifySlack(video, hashtag, reason);
+      seen[id] = Date.now();
+      alerted++;
+    } catch (err) {
+      // Don't let one failed Slack post abort the loop or lose the seen-state
+      // of everything already sent - just skip this one and retry it next run.
+      console.warn(`Failed to alert on ${id}, will retry next run: ${err.message}`);
+    }
   }
 
   writeFileSync(statePath, JSON.stringify(seen, null, 2));
   console.log(`Fetched ${fetched} videos across ${hashtags.length} hashtags`);
-  console.log(`${candidates.length} qualified, alerted on top ${toAlert.length}`);
+  console.log(`${candidates.length} qualified, alerted on ${alerted}/${toAlert.length}`);
 }
 
 main().catch((err) => {
