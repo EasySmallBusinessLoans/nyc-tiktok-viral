@@ -29,7 +29,7 @@ jobs:
 
       - name: Check for viral videos
         env:
-          APIFY_TOKENS: ${{ secrets.APIFY_TOKENS }}
+          APIFY_TOKENS: ${{ secrets.APIFY_TOKEN }},${{ secrets.APIFY_TOKEN_2 }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           APIFY_ACTOR_ID: apidojo~tiktok-scraper
           VIEW_THRESHOLD: "500000"

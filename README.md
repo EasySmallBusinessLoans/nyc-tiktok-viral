@@ -54,8 +54,11 @@ runs low.
      manage). Copy the webhook URL.
 
 3. **Add repo secrets** (Settings → Secrets and variables → Actions):
-   - `APIFY_TOKENS` — one token, or multiple comma-separated with no spaces
-     (e.g. `token1,token2,token3`)
+   - `APIFY_TOKEN` — your first Apify token
+   - `APIFY_TOKEN_2` (optional) — a second token for fallover once the first
+     runs low on credits. The workflow joins these into the comma-separated
+     list the script expects; add more (`APIFY_TOKEN_3`, ...) by extending
+     the `APIFY_TOKENS:` line in `.github/workflows/watch.yml`.
    - `SLACK_WEBHOOK_URL`
 
 4. **Enable the schedule** once check frequency is decided: uncomment the
