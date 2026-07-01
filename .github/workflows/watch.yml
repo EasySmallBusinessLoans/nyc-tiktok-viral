@@ -37,6 +37,7 @@ jobs:
           VIEW_THRESHOLD: "500000"
           LIKE_THRESHOLD: "100000"
           RESULTS_PER_HASHTAG: "10"
+          MAX_ALERTS_PER_RUN: "5"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: node scripts/check-viral.js
 

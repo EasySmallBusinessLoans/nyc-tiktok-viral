@@ -118,6 +118,8 @@ async function notifySlack(video, hashtag, reason) {
   }
 }
 
+const MAX_ALERTS_PER_RUN = Number(process.env.MAX_ALERTS_PER_RUN || 5);
+
 async function main() {
   if (!isScheduledRunTime()) {
     console.log("Not 7am Mountain Time yet at this cron trigger - skipping (no Apify calls made).");
@@ -127,7 +129,7 @@ async function main() {
   pruneSeen();
 
   let fetched = 0;
-  let alerted = 0;
+  const candidates = [];
 
   for (const hashtag of hashtags) {
     const items = await fetchHashtagVideos(hashtag);
@@ -150,16 +152,26 @@ async function main() {
           ? "500k+ views"
           : "100k+ likes";
 
-        await notifySlack(video, hashtag, reason);
-        seen[id] = Date.now();
-        alerted++;
+        candidates.push({ video, hashtag, reason, views, id });
       }
     }
   }
 
+  // Rank by views descending and only alert on the top N, so a busy day
+  // doesn't flood Slack - videos that qualify but don't make the cut are
+  // NOT marked as seen, so they can still surface on a future run if
+  // they're still trending relative to that run's candidates.
+  candidates.sort((a, b) => b.views - a.views);
+  const toAlert = candidates.slice(0, MAX_ALERTS_PER_RUN);
+
+  for (const { video, hashtag, reason, id } of toAlert) {
+    await notifySlack(video, hashtag, reason);
+    seen[id] = Date.now();
+  }
+
   writeFileSync(statePath, JSON.stringify(seen, null, 2));
   console.log(`Fetched ${fetched} videos across ${hashtags.length} hashtags`);
-  console.log(`Alerted on ${alerted} video(s)`);
+  console.log(`${candidates.length} qualified, alerted on top ${toAlert.length}`);
 }
 
 main().catch((err) => {
