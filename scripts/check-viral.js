@@ -94,18 +94,21 @@ async function fetchHashtagVideos(hashtag) {
 async function notifySlack(video, hashtag, reason) {
   const views = video.views ?? video.playCount ?? 0;
   const likes = video.likes ?? video.diggCount ?? 0;
-  const author = video.author?.uniqueId ?? video.authorMeta?.name ?? "unknown";
+  const comments = video.comments ?? video.commentCount ?? 0;
+  const shares = video.shares ?? video.shareCount ?? 0;
   const videoUrl = video.webVideoUrl ?? video.url ?? "";
-  const caption = video.text ? video.text.slice(0, 200) : null;
+  const caption = video.text ? video.text.slice(0, 200) : "";
 
   const text = [
     `*Viral NYC video detected* (${reason}) — #${hashtag}`,
-    videoUrl,
-    `by @${author} — ${views.toLocaleString()} views, ${likes.toLocaleString()} likes`,
-    caption ? `> ${caption}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `URL: ${videoUrl}`,
+    `Views: ${views.toLocaleString()}`,
+    `Likes: ${likes.toLocaleString()}`,
+    `Comments: ${comments.toLocaleString()}`,
+    `Shares: ${shares.toLocaleString()}`,
+    "",
+    `Caption: ${caption}`,
+  ].join("\n");
 
   const res = await fetch(SLACK_WEBHOOK_URL, {
     method: "POST",
