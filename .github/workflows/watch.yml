@@ -29,7 +29,9 @@ jobs:
 
       - name: Check for viral videos
         env:
-          APIFY_TOKENS: ${{ secrets.APIFY_TOKEN }},${{ secrets.APIFY_TOKEN_2 }}
+          # APIFY_TOKEN is out of credits - dropped from the list for now,
+          # add it back (or a fresh token) once it has balance again.
+          APIFY_TOKENS: ${{ secrets.APIFY_TOKEN_2 }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           APIFY_ACTOR_ID: apidojo~tiktok-scraper
           VIEW_THRESHOLD: "500000"
