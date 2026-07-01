@@ -118,7 +118,8 @@ async function notifySlack(video, hashtag, reason) {
   }
 }
 
-const MAX_ALERTS_PER_RUN = Number(process.env.MAX_ALERTS_PER_RUN || 5);
+// Unset (or non-numeric) means uncapped - alert on every qualifying video.
+const MAX_ALERTS_PER_RUN = Number(process.env.MAX_ALERTS_PER_RUN || Infinity);
 
 async function main() {
   if (!isScheduledRunTime()) {
