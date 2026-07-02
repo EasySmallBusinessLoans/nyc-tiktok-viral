@@ -13,11 +13,15 @@ const APIFY_TOKENS = (process.env.APIFY_TOKENS || "")
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 const ACTOR_ID = process.env.APIFY_ACTOR_ID || "apidojo~tiktok-scraper";
 
-const VIEW_THRESHOLD = Number(process.env.VIEW_THRESHOLD || 500000);
-const LIKE_THRESHOLD = Number(process.env.LIKE_THRESHOLD || 100000);
+const VIEW_THRESHOLD = Number(process.env.VIEW_THRESHOLD || 250000);
+const LIKE_THRESHOLD = Number(process.env.LIKE_THRESHOLD || 50000);
 const RESULTS_PER_HASHTAG = Number(process.env.RESULTS_PER_HASHTAG || 10);
 const SEEN_TTL_DAYS = 30;
 const GITHUB_EVENT_NAME = process.env.GITHUB_EVENT_NAME || "";
+
+function formatThreshold(n) {
+  return n % 1000 === 0 ? `${n / 1000}k` : n.toLocaleString();
+}
 
 function mtHourNow() {
   return Number(
@@ -188,10 +192,10 @@ async function main() {
 
       if (hitViews || hitLikes) {
         const reason = hitViews && hitLikes
-          ? "500k+ views & 100k+ likes"
+          ? `${formatThreshold(VIEW_THRESHOLD)}+ views & ${formatThreshold(LIKE_THRESHOLD)}+ likes`
           : hitViews
-          ? "500k+ views"
-          : "100k+ likes";
+          ? `${formatThreshold(VIEW_THRESHOLD)}+ views`
+          : `${formatThreshold(LIKE_THRESHOLD)}+ likes`;
 
         candidatesById.set(id, { video, hashtag, reason, views, id });
       }
