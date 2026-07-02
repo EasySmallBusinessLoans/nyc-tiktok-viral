@@ -19,21 +19,41 @@ const RESULTS_PER_HASHTAG = Number(process.env.RESULTS_PER_HASHTAG || 10);
 const SEEN_TTL_DAYS = 30;
 const GITHUB_EVENT_NAME = process.env.GITHUB_EVENT_NAME || "";
 
-// GitHub Actions cron runs in UTC, and Mountain Time shifts between MST
-// (UTC-7) and MDT (UTC-6) with daylight saving, so the workflow fires two
-// cron triggers a day (one per possible offset) and this checks which one,
-// if any, is actually 7am in Mountain Time right now. Manual dispatches
-// always run regardless of time, so testing isn't gated by the clock.
-function isScheduledRunTime() {
-  if (GITHUB_EVENT_NAME && GITHUB_EVENT_NAME !== "schedule") return true;
-  const hour = Number(
+function mtHourNow() {
+  return Number(
     new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Denver",
       hour: "numeric",
       hour12: false,
     }).format(new Date())
   );
-  return hour === 7;
+}
+
+function mtDateStringNow() {
+  // en-CA gives YYYY-MM-DD, which sorts/compares as a plain string.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Denver",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+// GitHub Actions cron runs in UTC and shifts between MST/MDT offsets across
+// daylight saving, so the workflow fires two cron triggers a day (one per
+// possible offset). GitHub also doesn't guarantee scheduled triggers fire
+// exactly on time - on lower-traffic repos they can be delayed by hours -
+// so this can't just check "is it exactly 7am right now" (that missed
+// every single run for two days straight once delay pushed triggers past
+// the exact hour). Instead: only run once per Mountain-time calendar day,
+// no earlier than 7am, and track the last completed date in state so
+// whichever trigger fires first after 7am does the real work and any
+// later trigger that day (delayed or not) sees it already ran and skips.
+// Manual dispatches always run regardless of time/date.
+function shouldRunNow(lastRunDate) {
+  if (GITHUB_EVENT_NAME && GITHUB_EVENT_NAME !== "schedule") return true;
+  if (mtHourNow() < 7) return false;
+  return mtDateStringNow() !== lastRunDate;
 }
 
 if (!APIFY_TOKENS.length) {
@@ -45,7 +65,13 @@ const hashtagsPath = path.join(ROOT, "config/hashtags.json");
 const statePath = path.join(ROOT, "state/seen.json");
 
 const hashtags = JSON.parse(readFileSync(hashtagsPath, "utf8"));
-const seen = JSON.parse(readFileSync(statePath, "utf8"));
+const rawState = JSON.parse(readFileSync(statePath, "utf8"));
+// Back-compat: older state files were a flat { videoId: timestamp } map
+// with no lastRunDate. Treat that shape as { lastRunDate: null, seen: <that> }.
+const state = "seen" in rawState
+  ? { lastRunDate: rawState.lastRunDate ?? null, seen: rawState.seen }
+  : { lastRunDate: null, seen: rawState };
+const seen = state.seen;
 
 function pruneSeen() {
   const cutoff = Date.now() - SEEN_TTL_DAYS * 24 * 60 * 60 * 1000;
@@ -125,8 +151,11 @@ async function notifySlack(video, hashtag, reason) {
 const MAX_ALERTS_PER_RUN = Number(process.env.MAX_ALERTS_PER_RUN || Infinity);
 
 async function main() {
-  if (!isScheduledRunTime()) {
-    console.log("Not 7am Mountain Time yet at this cron trigger - skipping (no Apify calls made).");
+  if (!shouldRunNow(state.lastRunDate)) {
+    console.log(
+      `Skipping - either before 7am Mountain Time (hour=${mtHourNow()}) or already ran today ` +
+      `(lastRunDate=${state.lastRunDate}, today=${mtDateStringNow()}). No Apify calls made.`
+    );
     return;
   }
 
@@ -190,7 +219,8 @@ async function main() {
     }
   }
 
-  writeFileSync(statePath, JSON.stringify(seen, null, 2));
+  state.lastRunDate = mtDateStringNow();
+  writeFileSync(statePath, JSON.stringify(state, null, 2));
   console.log(`Fetched ${fetched} videos across ${hashtags.length} hashtags`);
   console.log(`${candidates.length} qualified, alerted on ${alerted}/${toAlert.length}`);
 }
