@@ -97,6 +97,11 @@ async function callActorWithToken(token, hashtag) {
     keywords: [hashtag],
     sortType: "MOST_LIKED",
     maxItems: RESULTS_PER_HASHTAG,
+    // Added 2026-07-05: every run was returning {"noResults": true} with
+    // $0.00 usage in Apify's own Runs log (confirmed across 120 runs) -
+    // that pattern usually means TikTok is blocking requests from Apify's
+    // plain datacenter IPs. Explicitly requesting proxy to test that fix.
+    proxyConfiguration: { useApifyProxy: true },
   };
 
   const res = await fetch(url, {
