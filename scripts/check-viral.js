@@ -180,6 +180,13 @@ async function main() {
     }
     fetched += items.length;
 
+    // Diagnostic: show what this hashtag actually returned, so a run of
+    // "0 qualified" can be told apart from "the fetch itself is returning
+    // low-performing/stale content" (e.g. recent posts instead of top posts).
+    const maxViews = items.reduce((m, v) => Math.max(m, v.views ?? v.playCount ?? 0), 0);
+    const maxLikes = items.reduce((m, v) => Math.max(m, v.likes ?? v.diggCount ?? 0), 0);
+    console.log(`#${hashtag}: ${items.length} videos, max views=${maxViews.toLocaleString()}, max likes=${maxLikes.toLocaleString()}`);
+
     for (const video of items) {
       const id = video.id ?? video.webVideoUrl ?? video.url;
       if (!id || seen[id] || candidatesById.has(id)) continue;
