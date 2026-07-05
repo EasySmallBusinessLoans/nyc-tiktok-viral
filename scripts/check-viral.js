@@ -180,6 +180,14 @@ async function main() {
     }
     fetched += items.length;
 
+    // TEMPORARY: dump one raw video object to find the actual field names -
+    // views/likes are reading as 0 for everything, so the assumed field
+    // names are wrong. Remove this once the real keys are confirmed.
+    if (items[0] && !global.__dumpedSample) {
+      global.__dumpedSample = true;
+      console.log(`RAW SAMPLE from #${hashtag}:`, JSON.stringify(items[0], null, 2));
+    }
+
     // Diagnostic: show what this hashtag actually returned, so a run of
     // "0 qualified" can be told apart from "the fetch itself is returning
     // low-performing/stale content" (e.g. recent posts instead of top posts).
