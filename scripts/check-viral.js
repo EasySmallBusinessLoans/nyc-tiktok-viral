@@ -87,21 +87,20 @@ function pruneSeen() {
 async function callActorWithToken(token, hashtag) {
   // NOTE: verify this input/output shape against apidojo/tiktok-scraper's
   // current docs on the Apify Store before relying on it long-term - actor
-  // schemas change over time. Switched from startUrls (hashtag tag pages)
-  // to keywords on 2026-07-05 because startUrls was silently returning
-  // {"noResults": true} for every single hashtag - confirmed via a raw
-  // response dump, not just docs. keywords is documented as this actor's
-  // primary/supported search mechanism.
+  // schemas change over time. Uses keywords (this actor's primary search
+  // mechanism, confirmed against its live input schema).
+  //
+  // Root cause of the 2026-07-05 "every run returns noResults" incident:
+  // the search term was sent in its original case (e.g. "NYC") instead of
+  // lowercased. A manual test directly in Apify Console using lowercase
+  // "nyc" returned real results immediately, while our automated runs
+  // never did - confirmed by comparing a raw run log side by side. Proxy
+  // config was tried first and ruled out (not a required field, no effect).
   const url = `https://api.apify.com/v2/acts/${ACTOR_ID}/run-sync-get-dataset-items?token=${token}`;
   const input = {
-    keywords: [hashtag],
+    keywords: [hashtag.toLowerCase()],
     sortType: "MOST_LIKED",
     maxItems: RESULTS_PER_HASHTAG,
-    // Added 2026-07-05: every run was returning {"noResults": true} with
-    // $0.00 usage in Apify's own Runs log (confirmed across 120 runs) -
-    // that pattern usually means TikTok is blocking requests from Apify's
-    // plain datacenter IPs. Explicitly requesting proxy to test that fix.
-    proxyConfiguration: { useApifyProxy: true },
   };
 
   const res = await fetch(url, {
@@ -189,14 +188,6 @@ async function main() {
       continue;
     }
     fetched += items.length;
-
-    // TEMPORARY: dump one raw video object to find the actual field names -
-    // views/likes are reading as 0 for everything, so the assumed field
-    // names are wrong. Remove this once the real keys are confirmed.
-    if (items[0] && !global.__dumpedSample) {
-      global.__dumpedSample = true;
-      console.log(`RAW SAMPLE from #${hashtag}:`, JSON.stringify(items[0], null, 2));
-    }
 
     // Diagnostic: show what this hashtag actually returned, so a run of
     // "0 qualified" can be told apart from "the fetch itself is returning
