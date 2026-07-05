@@ -87,10 +87,15 @@ function pruneSeen() {
 async function callActorWithToken(token, hashtag) {
   // NOTE: verify this input/output shape against apidojo/tiktok-scraper's
   // current docs on the Apify Store before relying on it long-term - actor
-  // schemas change over time and this was last confirmed 2026-07-01.
+  // schemas change over time. Switched from startUrls (hashtag tag pages)
+  // to keywords on 2026-07-05 because startUrls was silently returning
+  // {"noResults": true} for every single hashtag - confirmed via a raw
+  // response dump, not just docs. keywords is documented as this actor's
+  // primary/supported search mechanism.
   const url = `https://api.apify.com/v2/acts/${ACTOR_ID}/run-sync-get-dataset-items?token=${token}`;
   const input = {
-    startUrls: [`https://www.tiktok.com/tag/${hashtag.toLowerCase()}`],
+    keywords: [hashtag],
+    sortType: "MOST_LIKED",
     maxItems: RESULTS_PER_HASHTAG,
   };
 
