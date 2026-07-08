@@ -1,8 +1,10 @@
 # TikTok Viral Watch
 
 Runs once daily at 7:00 AM Mountain Time, polling a curated list of NYC
-hashtags on TikTok, and posts to Slack every video that crosses **500k+
-views** or **100k+ likes**.
+hashtags on TikTok, and posts to Slack every video that qualifies via
+either: **500k+ views AND 50k+ likes**, OR **100k+ likes alone**. A video
+with modest likes only counts if it's also paired with big view count; a
+video with genuinely huge likes always counts, regardless of views.
 
 ## How it works
 
@@ -95,8 +97,10 @@ in place.
 
 All in `.github/workflows/watch.yml`:
 
-- `VIEW_THRESHOLD` / `LIKE_THRESHOLD` — alert thresholds (default 500000 /
-  100000).
+- `VIEW_THRESHOLD` (default 500000) + `COMBO_LIKE_THRESHOLD` (default 50000)
+  — together form the "views AND likes" branch: both must be met.
+- `LIKE_THRESHOLD` (default 100000) — the "likes alone" branch: qualifies
+  regardless of views.
 - `RESULTS_PER_HASHTAG` — how many top videos to pull per hashtag per run.
   This actor has a real floor of ~10 regardless of a lower setting - verify
   with a test run before assuming a lower number actually reduces cost.

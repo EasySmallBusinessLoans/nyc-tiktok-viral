@@ -35,6 +35,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           APIFY_ACTOR_ID: clockworks~tiktok-scraper
           VIEW_THRESHOLD: "500000"
+          COMBO_LIKE_THRESHOLD: "50000"
           LIKE_THRESHOLD: "100000"
           RESULTS_PER_HASHTAG: "10"
           # MAX_ALERTS_PER_RUN intentionally unset - uncapped, alerts on

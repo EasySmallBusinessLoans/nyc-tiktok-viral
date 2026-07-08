@@ -13,7 +13,12 @@ const APIFY_TOKENS = (process.env.APIFY_TOKENS || "")
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 const ACTOR_ID = process.env.APIFY_ACTOR_ID || "clockworks~tiktok-scraper";
 
+// Qualifies if (views >= VIEW_THRESHOLD AND likes >= COMBO_LIKE_THRESHOLD)
+// OR (likes >= LIKE_THRESHOLD alone) - a view-heavy video with modest likes
+// only counts if paired with COMBO_LIKE_THRESHOLD; a like-heavy video
+// always counts on its own, regardless of views.
 const VIEW_THRESHOLD = Number(process.env.VIEW_THRESHOLD || 500000);
+const COMBO_LIKE_THRESHOLD = Number(process.env.COMBO_LIKE_THRESHOLD || 50000);
 const LIKE_THRESHOLD = Number(process.env.LIKE_THRESHOLD || 100000);
 const RESULTS_PER_HASHTAG = Number(process.env.RESULTS_PER_HASHTAG || 10);
 const SEEN_TTL_DAYS = 30;
@@ -205,15 +210,13 @@ async function main() {
       const views = video.views ?? video.playCount ?? 0;
       const likes = video.likes ?? video.diggCount ?? 0;
 
-      const hitViews = views >= VIEW_THRESHOLD;
-      const hitLikes = likes >= LIKE_THRESHOLD;
+      const hitLikesAlone = likes >= LIKE_THRESHOLD;
+      const hitViewsAndCombo = views >= VIEW_THRESHOLD && likes >= COMBO_LIKE_THRESHOLD;
 
-      if (hitViews || hitLikes) {
-        const reason = hitViews && hitLikes
-          ? `${formatThreshold(VIEW_THRESHOLD)}+ views & ${formatThreshold(LIKE_THRESHOLD)}+ likes`
-          : hitViews
-          ? `${formatThreshold(VIEW_THRESHOLD)}+ views`
-          : `${formatThreshold(LIKE_THRESHOLD)}+ likes`;
+      if (hitLikesAlone || hitViewsAndCombo) {
+        const reason = hitLikesAlone
+          ? `${formatThreshold(LIKE_THRESHOLD)}+ likes`
+          : `${formatThreshold(VIEW_THRESHOLD)}+ views & ${formatThreshold(COMBO_LIKE_THRESHOLD)}+ likes`;
 
         candidatesById.set(id, { video, hashtag, reason, views, id });
       }
