@@ -34,8 +34,8 @@ jobs:
           APIFY_TOKENS: ${{ secrets.APIFY_TOKEN_2 }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           APIFY_ACTOR_ID: clockworks~tiktok-scraper
-          VIEW_THRESHOLD: "250000"
-          LIKE_THRESHOLD: "50000"
+          VIEW_THRESHOLD: "500000"
+          LIKE_THRESHOLD: "100000"
           RESULTS_PER_HASHTAG: "10"
           # MAX_ALERTS_PER_RUN intentionally unset - uncapped, alerts on
           # every video that qualifies. Set to a number to re-cap it.
