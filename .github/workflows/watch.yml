@@ -33,7 +33,7 @@ jobs:
           # add it back (or a fresh token) once it has balance again.
           APIFY_TOKENS: ${{ secrets.APIFY_TOKEN_2 }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          APIFY_ACTOR_ID: apidojo~tiktok-scraper
+          APIFY_ACTOR_ID: clockworks~tiktok-scraper
           VIEW_THRESHOLD: "250000"
           LIKE_THRESHOLD: "50000"
           RESULTS_PER_HASHTAG: "10"

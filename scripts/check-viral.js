@@ -11,7 +11,7 @@ const APIFY_TOKENS = (process.env.APIFY_TOKENS || "")
   .map((t) => t.trim())
   .filter(Boolean);
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-const ACTOR_ID = process.env.APIFY_ACTOR_ID || "apidojo~tiktok-scraper";
+const ACTOR_ID = process.env.APIFY_ACTOR_ID || "clockworks~tiktok-scraper";
 
 const VIEW_THRESHOLD = Number(process.env.VIEW_THRESHOLD || 250000);
 const LIKE_THRESHOLD = Number(process.env.LIKE_THRESHOLD || 50000);
@@ -85,22 +85,24 @@ function pruneSeen() {
 }
 
 async function callActorWithToken(token, hashtag) {
-  // NOTE: verify this input/output shape against apidojo/tiktok-scraper's
-  // current docs on the Apify Store before relying on it long-term - actor
-  // schemas change over time. Uses keywords (this actor's primary search
-  // mechanism, confirmed against its live input schema).
-  //
-  // Root cause of the 2026-07-05 "every run returns noResults" incident:
-  // the search term was sent in its original case (e.g. "NYC") instead of
-  // lowercased. A manual test directly in Apify Console using lowercase
-  // "nyc" returned real results immediately, while our automated runs
-  // never did - confirmed by comparing a raw run log side by side. Proxy
-  // config was tried first and ruled out (not a required field, no effect).
+  // Switched back to clockworks/tiktok-scraper on 2026-07-08 after a week
+  // of apidojo/tiktok-scraper returning {"noResults": true} on every
+  // automated run. Root cause (confirmed via that actor's own run log,
+  // not guessed): "The developer of this actor doesn't allow the use of
+  // API in the Free Plan." It only works when started manually from the
+  // Apify Console UI - every API-triggered call (which is all our script
+  // does) was blocked before any real scraping happened, regardless of
+  // input. clockworks/tiktok-scraper is confirmed to work via API (it's
+  // what successfully delivered real alerts in this project's very first
+  // test run) - costs more per result (~$3.70/1,000 vs $0.30/1,000) but
+  // actually works, which apidojo never did for us via automation.
   const url = `https://api.apify.com/v2/acts/${ACTOR_ID}/run-sync-get-dataset-items?token=${token}`;
   const input = {
-    keywords: [hashtag.toLowerCase()],
-    sortType: "MOST_LIKED",
-    maxItems: RESULTS_PER_HASHTAG,
+    hashtags: [hashtag.toLowerCase()],
+    resultsPerPage: RESULTS_PER_HASHTAG,
+    shouldDownloadVideos: false,
+    shouldDownloadCovers: false,
+    shouldDownloadSubtitles: false,
   };
 
   const res = await fetch(url, {

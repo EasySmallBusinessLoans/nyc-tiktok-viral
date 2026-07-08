@@ -11,7 +11,7 @@ views** or **50k+ likes**.
   activity/viral potential.
 - `scripts/check-viral.js` — for each hashtag, calls an
   [Apify](https://apify.com) TikTok scraper actor
-  (`apidojo/tiktok-scraper`, $0.30/1,000 results) for the top
+  (`clockworks/tiktok-scraper`, $3.70/1,000 results) for the top
   `RESULTS_PER_HASHTAG` videos on that hashtag's page (this actor has a
   floor of ~10 regardless of a lower setting - confirmed by testing, not
   just the docs), checks each against the thresholds, dedupes videos that
@@ -39,14 +39,20 @@ means "found on the next 7am check," not instant.
 
 ## Cost
 
-15 hashtags × 10 results/hashtag (the actor's real floor) × $0.0003/result
-= **$0.045 per run**, once daily = **~$1.35/month**. A single Apify
-free-tier account only covers ~$5/month, so `APIFY_TOKENS` supports
-multiple comma-separated tokens with automatic fallover once one runs low.
-`APIFY_TOKEN` (the original token) is currently out of credits and excluded
-from the workflow - only `APIFY_TOKEN_2` is in use. Add it back (or a fresh
-token) once it has balance again by editing the `APIFY_TOKENS:` line in
-`.github/workflows/watch.yml`.
+15 hashtags × 10 results/hashtag (the actor's real floor) × $0.0037/result
+= **$0.555 per run**, once daily = **~$16.65/month**. Still comfortably
+under a $1/day ceiling, just higher than the ~$0.045/run we'd hoped for
+with `apidojo/tiktok-scraper` before discovering (2026-07-08, after a week
+of silent failures) that actor's developer blocks API access entirely on
+Apify's free plan - it only works from the Console UI. `clockworks/tiktok-scraper`
+costs more per result but is confirmed to actually work via API, which is
+all that matters for an unattended script. A single Apify free-tier account
+only covers ~$5/month at this rate (about 9 days), so `APIFY_TOKENS`
+supports multiple comma-separated tokens with automatic fallover once one
+runs low. `APIFY_TOKEN` (the original token) is currently out of credits
+and excluded from the workflow - only `APIFY_TOKEN_2` is in use. Add it
+back (or a fresh token) once it has balance again by editing the
+`APIFY_TOKENS:` line in `.github/workflows/watch.yml`.
 
 Alert volume (how many videos get posted to Slack) doesn't affect this cost
 at all - the Apify fetch is a fixed cost regardless of how many candidates
@@ -57,11 +63,15 @@ message. That's why alerts are uncapped by default.
 
 1. **Apify account + API token(s)**
    - Sign up at [apify.com](https://apify.com).
-   - This uses the [TikTok Scraper actor by Api Dojo](https://apify.com/apidojo/tiktok-scraper)
-     (actor ID `apidojo~tiktok-scraper`) - confirm this is still correct and
-     check the actor's current input/output schema on its Store page before
-     relying on it long-term, since third-party actors change their fields
-     over time (last verified 2026-07-01).
+   - This uses the [TikTok Scraper actor by Clockworks](https://apify.com/clockworks/tiktok-scraper)
+     (actor ID `clockworks~tiktok-scraper`) - confirm this is still correct
+     and check the actor's current input/output schema on its Store page
+     before relying on it long-term, since third-party actors change their
+     fields over time (last verified 2026-07-08). Before switching to any
+     other actor to save cost, confirm on its Store page (or with a manual
+     Console test) that it actually permits API access on your plan -
+     `apidojo/tiktok-scraper` looked cheaper but silently blocked all API
+     calls on the free plan for a full week before we caught it.
    - Get your API token(s) from Apify Console → Settings → Integrations. If
      using more than one account/token for fallover, gather all of them.
 
