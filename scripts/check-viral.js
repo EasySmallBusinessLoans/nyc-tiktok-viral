@@ -137,6 +137,22 @@ async function fetchHashtagVideos(hashtag) {
   throw new Error(`All ${APIFY_TOKENS.length} Apify token(s) failed for #${hashtag}. Last error: ${lastError?.message}`);
 }
 
+function extractPostedDate(video) {
+  // NOTE: exact field name unverified against a real clockworks/tiktok-scraper
+  // sample - check a live Slack message shows a real date, not "Unknown",
+  // and adjust this fallback chain if needed.
+  const raw = video.createTimeISO ?? video.createTime ?? video.uploadedAtFormatted ?? video.uploadedAt;
+  if (!raw) return null;
+  const date = typeof raw === "number"
+    ? new Date(raw < 10_000_000_000 ? raw * 1000 : raw) // seconds vs ms
+    : new Date(raw);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function formatDate(date) {
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
 async function notifySlack(video, hashtag, reason) {
   const views = video.views ?? video.playCount ?? 0;
   const likes = video.likes ?? video.diggCount ?? 0;
@@ -144,9 +160,13 @@ async function notifySlack(video, hashtag, reason) {
   const shares = video.shares ?? video.shareCount ?? 0;
   const videoUrl = video.webVideoUrl ?? video.url ?? "";
   const caption = video.text ? video.text.slice(0, 200) : "";
+  const username = video.author?.uniqueId ?? video.authorMeta?.name ?? video.channel?.username ?? "";
+  const postedDate = extractPostedDate(video);
 
   const text = [
+    username ? `<https://www.tiktok.com/@${username}|@${username}>` : null,
     `*Viral NYC video detected* (${reason}) — #${hashtag}`,
+    postedDate ? `Date: ${formatDate(postedDate)}` : null,
     `URL: ${videoUrl}`,
     `Views: ${views.toLocaleString()}`,
     `Likes: ${likes.toLocaleString()}`,
@@ -154,7 +174,7 @@ async function notifySlack(video, hashtag, reason) {
     `Shares: ${shares.toLocaleString()}`,
     "",
     `Caption: ${caption}`,
-  ].join("\n");
+  ].filter((line) => line !== null).join("\n");
 
   const res = await fetch(SLACK_WEBHOOK_URL, {
     method: "POST",
