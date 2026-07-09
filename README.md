@@ -27,13 +27,18 @@ video with genuinely huge likes always counts, regardless of views.
 - `state/seen.json` — video IDs already alerted on, so the same video isn't
   posted twice. Pruned after 30 days. Committed back to the repo by the
   workflow after every run.
-- `.github/workflows/watch.yml` — GitHub Actions job. Cron fires twice daily
-  in UTC (`13:00` and `14:00`) to cover both Mountain Time offsets across
-  daylight saving (MDT is UTC-6, MST is UTC-7) - the script itself checks
-  the real current Mountain time and only does actual work on whichever
-  trigger is genuinely 7am there. The other is a near-free no-op. Manual
-  `workflow_dispatch` runs always execute regardless of the clock, for
-  testing.
+- `.github/workflows/watch.yml` — GitHub Actions job. Cron fires 6 times
+  spread across the morning (13:07, 13:37, 14:07, 14:37, 15:07, 16:07 UTC),
+  covering both Mountain Time DST offsets with off-the-hour minutes and
+  redundant triggers. This is deliberate overkill: GitHub's `schedule:`
+  trigger is best-effort and was observed firing 1.5-3+ hours late every
+  day for a week, and outright not firing at all on one day (2026-07-09) -
+  a single daily trigger is a single point of failure. `check-viral.js`
+  only does real work once per Mountain-time calendar day, no earlier than
+  7am - whichever trigger fires first after that does the work (~$0.555),
+  every other trigger that day sees it already ran and no-ops (~15s, $0).
+  Manual `workflow_dispatch` runs always execute regardless of the clock,
+  for testing.
 
 This is **polling, not push** — TikTok has no public API for real-time
 hashtag-wide view/like alerts, so with a once-daily schedule, "alert" here

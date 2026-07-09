@@ -2,12 +2,22 @@ name: TikTok Viral Watch
 
 on:
   schedule:
-    # Fires twice daily in UTC to cover both Mountain Time offsets across
-    # daylight saving (MDT UTC-6 / MST UTC-7). check-viral.js checks the
-    # actual current Mountain time and only proceeds on the one that's
-    # really 7am there - the other is a near-free no-op (no Apify calls).
-    - cron: "0 13 * * *" # 7:00 AM MDT
-    - cron: "0 14 * * *" # 7:00 AM MST
+    # GitHub's schedule trigger is best-effort: observed 1.5-3+ hour delays
+    # every day for a week, and on 2026-07-09 didn't fire at all. Two
+    # mitigations here: (1) off-the-hour minutes, since GitHub documents
+    # the top of every hour as their highest-congestion window; (2)
+    # multiple redundant triggers spread across the morning covering both
+    # Mountain Time DST offsets (MDT UTC-6 / MST UTC-7), so one dropped
+    # trigger doesn't mean the whole day is silently skipped. Skipped runs
+    # cost ~15s and zero Apify calls - check-viral.js only does real work
+    # once per Mountain-time day, no earlier than 7am; whichever trigger
+    # fires first after that does the work, the rest no-op.
+    - cron: "7 13 * * *"
+    - cron: "7 14 * * *"
+    - cron: "37 13 * * *"
+    - cron: "37 14 * * *"
+    - cron: "7 15 * * *"
+    - cron: "7 16 * * *"
   workflow_dispatch: {}
 
 permissions:
